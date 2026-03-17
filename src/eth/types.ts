@@ -19,6 +19,9 @@ export interface ExplorerEvent {
 }
 
 export interface EthContextValue {
+  // Separate provider that doesn't require user wallet connection, for read-only operations
+  readonly readProvider: import("ethers").JsonRpcProvider;
+
   readonly provider: import("ethers").BrowserProvider | undefined;
   readonly account: string | null;
   readonly balanceEth: string | null;

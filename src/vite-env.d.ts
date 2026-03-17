@@ -11,3 +11,15 @@ declare module "*&imagetools" {
 interface Window {
   ethereum?: import("ethers").Eip1193Provider;
 }
+
+interface ViteTypeOptions {
+  strictImportMetaEnv: unknown;
+}
+
+interface ImportMetaEnv {
+  readonly VITE_SEPOLIA_RPC_URL: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

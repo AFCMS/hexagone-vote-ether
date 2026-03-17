@@ -14,7 +14,7 @@ import {
 
 function App() {
   const {
-    provider,
+    readProvider,
     error,
     account,
     balanceEth,
@@ -42,11 +42,10 @@ function App() {
   } | null>(null);
 
   const loadBlockDetails = async (blockNumber: number) => {
-    if (!provider) return;
     setBlockLoading(true);
     setBlockError(null);
     try {
-      const b = await provider.getBlock(blockNumber);
+      const b = await readProvider.getBlock(blockNumber);
       if (!b) {
         setBlockError("Block not found.");
         setBlockDetails(null);
@@ -67,10 +66,10 @@ function App() {
   };
 
   useEffect(() => {
-    if (explorerOpen && provider) {
+    if (explorerOpen) {
       void loadExplorerEvents();
     }
-  }, [explorerOpen, provider, loadExplorerEvents]);
+  }, [explorerOpen, loadExplorerEvents]);
 
   return (
     <div className="min-h-dvh bg-base-200">

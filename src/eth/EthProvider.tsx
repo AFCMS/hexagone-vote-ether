@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
-import { BrowserProvider, Contract, formatEther } from "ethers";
+import {
+  BrowserProvider,
+  Contract,
+  formatEther,
+  JsonRpcProvider,
+} from "ethers";
 
 import {
   CONTRACT_ADDRESS,
   EXPECTED_CHAIN_ID,
   EXPECTED_NETWORK_NAME,
+  SEPOLIA_RPC_URL,
 } from "../utils/constants";
 import ABI from "../utils/abi.json" with { type: "json" };
 import type {
@@ -19,6 +25,11 @@ import type {
 import { EthContext } from "./EthContext";
 
 export function EthProvider(props: { readonly children: ReactNode }) {
+  const readProvider = useMemo(
+    () => new JsonRpcProvider(SEPOLIA_RPC_URL, EXPECTED_CHAIN_ID),
+    [],
+  );
+
   const [provider, setProvider] = useState<BrowserProvider>();
   const [account, setAccount] = useState<string | null>(null);
   const [balanceEth, setBalanceEth] = useState<string | null>(null);
@@ -44,8 +55,8 @@ export function EthProvider(props: { readonly children: ReactNode }) {
     candidatesRef.current = candidates;
   }, [candidates]);
 
-  const loadCandidates = useCallback(async (p: BrowserProvider) => {
-    const contract = new Contract(CONTRACT_ADDRESS, ABI, p);
+  const loadCandidates = useCallback(async () => {
+    const contract = new Contract(CONTRACT_ADDRESS, ABI, readProvider);
     const count = await contract.getCandidatesCount();
     const list: Candidate[] = [];
 
@@ -55,19 +66,23 @@ export function EthProvider(props: { readonly children: ReactNode }) {
     }
 
     setCandidates(list);
-  }, []);
+  }, [readProvider]);
 
   const refreshBalance = useCallback(
-    async (p: BrowserProvider, addr: string) => {
+    async (addr: string) => {
       try {
-        const bal = await p.getBalance(addr);
+        const bal = await readProvider.getBalance(addr);
         setBalanceEth(formatEther(bal));
       } catch {
         setBalanceEth(null);
       }
     },
-    [],
+    [readProvider],
   );
+
+  useEffect(() => {
+    void loadCandidates();
+  }, [loadCandidates]);
 
   useEffect(() => {
     const init = async () => {
@@ -82,28 +97,27 @@ export function EthProvider(props: { readonly children: ReactNode }) {
 
       try {
         const p = new BrowserProvider(window.ethereum);
-        const network = await p.getNetwork();
-
-        if (network.chainId !== BigInt(EXPECTED_CHAIN_ID)) {
-          setError(
-            `Wrong network. Expected ${EXPECTED_NETWORK_NAME} (${EXPECTED_CHAIN_ID}), got ${network.name} (${network.chainId})`,
-          );
-          setAutoConnectAttempted(true);
-          return;
-        }
-
-        setProvider(p);
-        setError(null);
-
-        await loadCandidates(p);
 
         try {
           const accounts = (await p.send("eth_accounts", [])) as string[];
           const addr = accounts?.[0];
-          if (addr) {
-            setAccount(addr);
-            void refreshBalance(p, addr);
+
+          if (!addr) {
+            setAutoConnectAttempted(true);
+            return;
           }
+
+          const network = await p.getNetwork();
+          if (network.chainId !== BigInt(EXPECTED_CHAIN_ID)) {
+            // Don't block app load; just don't auto-connect on the wrong network.
+            setAutoConnectAttempted(true);
+            return;
+          }
+
+          setProvider(p);
+          setAccount(addr);
+          setError(null);
+          void refreshBalance(addr);
         } catch {
           // Ignore: auto-connect is best-effort and should not block app load.
         }
@@ -117,16 +131,16 @@ export function EthProvider(props: { readonly children: ReactNode }) {
     };
 
     void init();
-  }, [loadCandidates, refreshBalance]);
+  }, [refreshBalance]);
 
   useEffect(() => {
-    if (!provider || !account) {
+    if (!account) {
       setBalanceEth(null);
       return;
     }
 
-    void refreshBalance(provider, account);
-  }, [provider, account, refreshBalance]);
+    void refreshBalance(account);
+  }, [account, refreshBalance]);
 
   useEffect(() => {
     type AccountsChangedHandler = (accounts: string[]) => void;
@@ -156,7 +170,7 @@ export function EthProvider(props: { readonly children: ReactNode }) {
         return;
       }
 
-      void refreshBalance(provider, next);
+      void refreshBalance(next);
     };
 
     eth.on("accountsChanged", handler);
@@ -182,11 +196,11 @@ export function EthProvider(props: { readonly children: ReactNode }) {
   }, [cooldownSeconds]);
 
   useEffect(() => {
-    if (!provider) return;
+    if (!readProvider) return;
 
     let listenContract: Contract | undefined;
     try {
-      listenContract = new Contract(CONTRACT_ADDRESS, ABI, provider);
+      listenContract = new Contract(CONTRACT_ADDRESS, ABI, readProvider);
 
       const handler = (voter: string, candidateIndex: bigint) => {
         const idx = Number(candidateIndex);
@@ -198,7 +212,7 @@ export function EthProvider(props: { readonly children: ReactNode }) {
           candidateName,
         });
 
-        void loadCandidates(provider);
+        void loadCandidates();
       };
 
       listenContract.on("Voted", handler);
@@ -212,7 +226,7 @@ export function EthProvider(props: { readonly children: ReactNode }) {
         typeof message === "string" ? message : err,
       );
     }
-  }, [provider, loadCandidates]);
+  }, [readProvider, loadCandidates]);
 
   const connectWallet = useCallback(async () => {
     try {
@@ -239,12 +253,11 @@ export function EthProvider(props: { readonly children: ReactNode }) {
       setProvider(p);
       setError(null);
 
-      void refreshBalance(p, address);
-      await loadCandidates(p);
+      void refreshBalance(address);
     } catch {
       setError("Connection refused.");
     }
-  }, [loadCandidates, refreshBalance]);
+  }, [refreshBalance]);
 
   const vote = useCallback(
     async (candidateIndex: number) => {
@@ -254,6 +267,21 @@ export function EthProvider(props: { readonly children: ReactNode }) {
       }
       if (!account) {
         setError("Connect MetaMask to vote.");
+        return;
+      }
+
+      try {
+        const network = await provider.getNetwork();
+        if (network.chainId !== BigInt(EXPECTED_CHAIN_ID)) {
+          setError(
+            `Wrong network - connect MetaMask to ${EXPECTED_NETWORK_NAME}.`,
+          );
+          return;
+        }
+      } catch {
+        setError(
+          `Wrong network - connect MetaMask to ${EXPECTED_NETWORK_NAME}.`,
+        );
         return;
       }
 
@@ -278,8 +306,8 @@ export function EthProvider(props: { readonly children: ReactNode }) {
         const receipt = await tx.wait();
         setLastBlockNumber(Number(receipt.blockNumber));
 
-        await loadCandidates(provider);
-        void refreshBalance(provider, account);
+        await loadCandidates();
+        void refreshBalance(account);
 
         setCooldownSeconds(3 * 60);
       } catch (err) {
@@ -301,18 +329,17 @@ export function EthProvider(props: { readonly children: ReactNode }) {
   );
 
   const loadExplorerEvents = useCallback(async () => {
-    if (!provider) return;
     setExplorerLoading(true);
 
     try {
-      const ec = new Contract(CONTRACT_ADDRESS, ABI, provider);
+      const ec = new Contract(CONTRACT_ADDRESS, ABI, readProvider);
       const filter = ec.filters.Voted();
 
       let raw: unknown[] = [];
       try {
         raw = await ec.queryFilter(filter, -1000);
       } catch {
-        const current = await provider.getBlockNumber();
+        const current = await readProvider.getBlockNumber();
         const fromBlock = Math.max(0, current - 1000);
         raw = await ec.queryFilter(filter, fromBlock);
       }
@@ -337,14 +364,14 @@ export function EthProvider(props: { readonly children: ReactNode }) {
           let gasUsed: number | null = null;
 
           try {
-            const block = await provider.getBlock(ev.blockNumber);
+            const block = await readProvider.getBlock(ev.blockNumber);
             timestamp = block?.timestamp ?? null;
           } catch {
             /* silent */
           }
 
           try {
-            const receipt = await provider.getTransactionReceipt(
+            const receipt = await readProvider.getTransactionReceipt(
               ev.transactionHash,
             );
             gasUsed = receipt?.gasUsed != null ? Number(receipt.gasUsed) : null;
@@ -370,11 +397,12 @@ export function EthProvider(props: { readonly children: ReactNode }) {
     } finally {
       setExplorerLoading(false);
     }
-  }, [provider]);
+  }, [readProvider]);
 
   const value = useMemo(
     () =>
       ({
+        readProvider,
         provider,
         account,
         balanceEth,
@@ -395,6 +423,7 @@ export function EthProvider(props: { readonly children: ReactNode }) {
         loadExplorerEvents,
       }) satisfies EthContextValue,
     [
+      readProvider,
       provider,
       account,
       balanceEth,

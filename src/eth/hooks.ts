@@ -10,6 +10,7 @@ export function useEth() {
 
 export function useEthWallet() {
   const {
+    readProvider,
     provider,
     account,
     balanceEth,
@@ -20,6 +21,7 @@ export function useEthWallet() {
     connectWallet,
   } = useEth();
   return {
+    readProvider,
     provider,
     account,
     balanceEth,
