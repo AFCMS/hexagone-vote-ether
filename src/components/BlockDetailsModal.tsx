@@ -1,3 +1,5 @@
+import { AlertTriangle, ArrowLeft, ArrowRight, X } from "lucide-react";
+
 interface BlockDetailsModalProps {
   readonly open: boolean;
   readonly loading: boolean;
@@ -25,7 +27,7 @@ export function BlockDetailsModal(props: BlockDetailsModalProps) {
             Block details #{props.blockNumber ?? "-"}
           </h3>
           <button className="btn btn-sm btn-ghost" onClick={props.onClose}>
-            ✕
+            <X className="h-4 w-4" />
           </button>
         </div>
 
@@ -37,7 +39,10 @@ export function BlockDetailsModal(props: BlockDetailsModalProps) {
             </div>
           ) : props.error ? (
             <div className="alert alert-error">
-              <span>⚠ {props.error}</span>
+              <span className="inline-flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                {props.error}
+              </span>
             </div>
           ) : props.details ? (
             <div className="space-y-3">
@@ -82,7 +87,8 @@ export function BlockDetailsModal(props: BlockDetailsModalProps) {
               }
               onClick={props.onPrev}
             >
-              ← Previous block
+              <ArrowLeft className="h-4 w-4" />
+              Previous block
             </button>
 
             <button
@@ -90,7 +96,8 @@ export function BlockDetailsModal(props: BlockDetailsModalProps) {
               disabled={props.loading || props.blockNumber == null}
               onClick={props.onNext}
             >
-              Next block →
+              Next block
+              <ArrowRight className="h-4 w-4" />
             </button>
           </div>
         </div>

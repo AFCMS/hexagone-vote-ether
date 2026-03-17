@@ -1,5 +1,6 @@
 import { candidatesIcons } from "../utils/constants";
 import { useEthCandidates, useEthVoting, useEthWallet } from "../eth/hooks";
+import { ArrowRight, Loader2 } from "lucide-react";
 
 export function CandidatesIcons() {
   const { candidates } = useEthCandidates();
@@ -79,7 +80,17 @@ export function CandidatesIcons() {
                     onClick={() => vote(candidate.id)}
                     disabled={isVoting}
                   >
-                    {isVoting ? "⏳ Voting..." : "Vote →"}
+                    {isVoting ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Voting...
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-2">
+                        Vote
+                        <ArrowRight className="h-4 w-4" />
+                      </span>
+                    )}
                   </button>
                 )}
               </div>
