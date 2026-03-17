@@ -7,7 +7,7 @@ export const SEPOLIA_RPC_URL =
   "https://ethereum-sepolia.publicnode.com";
 
 import leonBlum from "../assets/leon_blum.png?h=112&w=112&format=avif&imagetools";
-import chirac from "../assets/chiraq.png?h=112&w=112&format=avif&imagetools";
-import miterrand from "../assets/miterrand.png?h=112&w=112&format=avif&imagetools";
+import chirac from "../assets/chirac.png?h=112&w=112&format=avif&imagetools";
+import mitterrand from "../assets/mitterrand.png?h=112&w=112&format=avif&imagetools";
 
-export const candidatesIcons = [leonBlum, chirac, miterrand] as const;
+export const candidatesIcons = [leonBlum, chirac, mitterrand] as const;
