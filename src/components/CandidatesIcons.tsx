@@ -1,25 +1,16 @@
 import { candidatesIcons } from "../utils/constants";
+import { useEthCandidates, useEthVoting, useEthWallet } from "../eth/hooks";
 
-interface Candidate {
-  readonly id: number;
-  readonly name: string;
-  readonly votes: number;
-}
+export function CandidatesIcons() {
+  const { candidates } = useEthCandidates();
+  const { account } = useEthWallet();
+  const { vote, isVoting, cooldownSeconds } = useEthVoting();
 
-interface CandidatesIconsProps {
-  readonly candidates: readonly Candidate[];
-  readonly account: string | null;
-  readonly cooldownSeconds: number;
-  readonly isVoting: boolean;
-  readonly onVote: (candidateIndex: number) => void;
-}
+  const totalVotes = candidates.reduce((sum, c) => sum + c.votes, 0);
 
-export function CandidatesIcons(props: CandidatesIconsProps) {
-  const totalVotes = props.candidates.reduce((sum, c) => sum + c.votes, 0);
-
-  const leaderId = props.candidates.reduce<number | null>((leader, c) => {
+  const leaderId = candidates.reduce<number | null>((leader, c) => {
     if (leader === null) return c.id;
-    const leaderVotes = props.candidates.find((x) => x.id === leader)?.votes;
+    const leaderVotes = candidates.find((x) => x.id === leader)?.votes;
     if (leaderVotes == null) return c.id;
     return c.votes > leaderVotes ? c.id : leader;
   }, null);
@@ -32,7 +23,7 @@ export function CandidatesIcons(props: CandidatesIconsProps) {
       </div>
 
       <div className="flex flex-row flex-wrap justify-center gap-6">
-        {props.candidates.map((candidate) => {
+        {candidates.map((candidate) => {
           const percentage =
             totalVotes > 0
               ? Math.round((candidate.votes / totalVotes) * 100)
@@ -82,13 +73,13 @@ export function CandidatesIcons(props: CandidatesIconsProps) {
                   max={100}
                 />
 
-                {props.account && props.cooldownSeconds === 0 && (
+                {account && cooldownSeconds === 0 && (
                   <button
                     className="btn btn-primary btn-sm"
-                    onClick={() => props.onVote(candidate.id)}
-                    disabled={props.isVoting}
+                    onClick={() => vote(candidate.id)}
+                    disabled={isVoting}
                   >
-                    {props.isVoting ? "⏳ Voting..." : "Vote →"}
+                    {isVoting ? "⏳ Voting..." : "Vote →"}
                   </button>
                 )}
               </div>

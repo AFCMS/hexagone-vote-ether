@@ -1,41 +1,78 @@
-import { useEther } from "./hooks/use_ether";
+import { useEffect, useState } from "react";
+
 import { CandidatesIcons } from "./components/CandidatesIcons";
-import { EXPECTED_NETWORK_NAME } from "./utils/constants";
+import { Navbar } from "./components/Navbar";
+import { StatusAlerts } from "./components/StatusAlerts";
+import { ExplorerPanel } from "./components/ExplorerPanel";
+import { BlockDetailsModal } from "./components/BlockDetailsModal";
+import {
+  useEthExplorer,
+  useEthRealtime,
+  useEthVoting,
+  useEthWallet,
+} from "./eth/hooks";
 
 function App() {
-  const {
-    candidates,
-    error,
-    account,
-    connectWallet,
-    vote,
-    isVoting,
-    cooldownSeconds,
-    txHash,
-    lastBlockNumber,
-  } = useEther();
+  const { provider, error, account, balanceEth, connectWallet } =
+    useEthWallet();
+  const { cooldownSeconds, txHash, lastBlockNumber } = useEthVoting();
+  const { lastEvent } = useEthRealtime();
+  const { explorerEvents, explorerLoading, loadExplorerEvents } =
+    useEthExplorer();
+
+  const [explorerOpen, setExplorerOpen] = useState(false);
+
+  const [blockModalOpen, setBlockModalOpen] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
+  const [blockError, setBlockError] = useState<string | null>(null);
+  const [selectedBlockNumber, setSelectedBlockNumber] = useState<number | null>(
+    null,
+  );
+  const [blockDetails, setBlockDetails] = useState<{
+    parentHash: string;
+    gasLimit: string;
+    gasUsed: string;
+    miner: string;
+  } | null>(null);
+
+  const loadBlockDetails = async (blockNumber: number) => {
+    if (!provider) return;
+    setBlockLoading(true);
+    setBlockError(null);
+    try {
+      const b = await provider.getBlock(blockNumber);
+      if (!b) {
+        setBlockError("Block not found.");
+        setBlockDetails(null);
+        return;
+      }
+      setBlockDetails({
+        parentHash: b.parentHash,
+        gasLimit: b.gasLimit.toString(),
+        gasUsed: b.gasUsed.toString(),
+        miner: (b as { miner?: string }).miner ?? "-",
+      });
+    } catch (e) {
+      setBlockError(String(e));
+      setBlockDetails(null);
+    } finally {
+      setBlockLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (explorerOpen && provider) {
+      void loadExplorerEvents();
+    }
+  }, [explorerOpen, provider, loadExplorerEvents]);
 
   return (
     <div className="min-h-dvh bg-base-200">
-      <div className="navbar bg-base-100 shadow-sm">
-        <div className="mx-auto w-full max-w-5xl px-4">
-          <div className="flex w-full items-center justify-between">
-            <a className="btn btn-ghost text-xl">Hexagone Vote</a>
-            {!account ? (
-              <button className="btn btn-primary" onClick={connectWallet}>
-                Connect MetaMask
-              </button>
-            ) : (
-              <div className="text-sm">
-                <span className="opacity-70">Connected:</span>{" "}
-                <span className="font-mono font-semibold">{account}</span>
-                <span className="opacity-70"> · </span>
-                <span className="font-semibold">{EXPECTED_NETWORK_NAME}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <Navbar
+        account={account}
+        balanceEth={balanceEth}
+        onConnect={connectWallet}
+      />
 
       <main className="mx-auto w-full max-w-5xl px-4 py-8">
         <div className="card bg-base-100 shadow-sm">
@@ -48,46 +85,51 @@ function App() {
               </p>
             </div>
 
-            {error && (
-              <div className="alert alert-error">
-                <span>⚠ {error}</span>
-              </div>
-            )}
-
-            {account && cooldownSeconds > 0 && (
-              <div className="alert alert-warning">
-                <div className="flex w-full flex-col gap-1">
-                  <p className="font-medium">⏳ Prochain vote disponible dans :</p>
-                  <p className="font-mono text-3xl font-bold tabular-nums">
-                    {String(Math.floor(cooldownSeconds / 60)).padStart(2, "0")}:
-                    {String(cooldownSeconds % 60).padStart(2, "0")}
-                  </p>
-                  <p className="text-xs opacity-70">
-                    La blockchain enregistre l'heure de votre dernier vote via
-                    block.timestamp
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {txHash && (
-              <div className="alert alert-info">
-                <span className="break-all">Transaction envoyée : {txHash}</span>
-              </div>
-            )}
-
-            {lastBlockNumber && (
-              <div className="alert alert-success">
-                <span>✅ Incluse dans le bloc #{lastBlockNumber}</span>
-              </div>
-            )}
-
-            <CandidatesIcons
-              candidates={candidates}
+            <StatusAlerts
+              error={error}
               account={account}
               cooldownSeconds={cooldownSeconds}
-              isVoting={isVoting}
-              onVote={vote}
+              txHash={txHash}
+              lastBlockNumber={lastBlockNumber}
+              lastEvent={lastEvent}
+            />
+
+            <CandidatesIcons />
+
+            <div className="divider" />
+
+            <ExplorerPanel
+              open={explorerOpen}
+              onToggle={() => setExplorerOpen((o) => !o)}
+              loading={explorerLoading}
+              events={explorerEvents}
+              onSelectBlock={(blockNumber) => {
+                setExplorerOpen(true);
+                setBlockModalOpen(true);
+                setSelectedBlockNumber(blockNumber);
+                void loadBlockDetails(blockNumber);
+              }}
+            />
+
+            <BlockDetailsModal
+              open={blockModalOpen}
+              loading={blockLoading}
+              error={blockError}
+              blockNumber={selectedBlockNumber}
+              details={blockDetails}
+              onClose={() => setBlockModalOpen(false)}
+              onPrev={() => {
+                if (selectedBlockNumber == null) return;
+                const next = selectedBlockNumber - 1;
+                setSelectedBlockNumber(next);
+                void loadBlockDetails(next);
+              }}
+              onNext={() => {
+                if (selectedBlockNumber == null) return;
+                const next = selectedBlockNumber + 1;
+                setSelectedBlockNumber(next);
+                void loadBlockDetails(next);
+              }}
             />
           </div>
         </div>
