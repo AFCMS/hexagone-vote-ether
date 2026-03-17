@@ -5,3 +5,7 @@
   root: ":root";
   logs: false;
 }
+
+html {
+  scrollbar-gutter: stable both-edges;
+}
