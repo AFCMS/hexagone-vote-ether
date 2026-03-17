@@ -1,5 +1,7 @@
 # Hexagone Vote Ether
 
+This web application is a frontend to a [smart contract](https://sepolia.etherscan.io/address/0x07dc061bf3c8e7f5db6d908b4e86eb9f0ab5fa35) that allows users to vote between [Léon Blum](https://en.wikipedia.org/wiki/L%C3%A9on_Blum), [Jacques Chirac](https://en.wikipedia.org/wiki/Jacques_Chirac) and [François Mitterrand](https://en.wikipedia.org/wiki/Fran%C3%A7ois_Mitterrand) using the **Ethereum** blockchain (Sepolia testnet).
+
 ## Questions
 
 ### Etape 4

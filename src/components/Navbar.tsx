@@ -21,7 +21,14 @@ export function Navbar(props: NavbarProps) {
             <div className="flex flex-wrap items-center justify-end gap-2 text-sm">
               <div>
                 <span className="opacity-70">Connected:</span>{" "}
-                <span className="font-mono font-semibold">{props.account}</span>
+                <a
+                  className="font-mono font-semibold"
+                  href={`https://sepolia.etherscan.io/address/${props.account}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {props.account}
+                </a>
                 <span className="opacity-70"> · </span>
                 <span className="font-semibold">{EXPECTED_NETWORK_NAME}</span>
               </div>
