@@ -4,6 +4,18 @@ This web application is a frontend to a [smart contract](https://sepolia.ethersc
 
 ## Questions
 
+### Etape 1
+
+Les données de la blockchain sont publiques et accessibles à tous, pas besoin d'être connecté pour les consulter. (ici on n'utilise MetaMask que pour les transactions en écriture, la récupération se fait via un provider JSON-RPC)
+
+### Etape 2
+
+L’adresse ne suffit pas pour voter, il faut signer la transaction avec la clé privée associée à l'addresse, qui est gérée par MetaMask.
+
+### Etape 3
+
+Le smart contract vérifie le cooldown, pas le frontend. C'est lui qui contient la logique des règles du vote.
+
 ### Etape 4
 
 `Date.now()` dépend de l'heure du système de l'utilisateur qui peut être modifiée ou incorrecte.
