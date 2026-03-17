@@ -8,6 +8,10 @@ interface Candidate {
 
 interface CandidatesIconsProps {
   readonly candidates: readonly Candidate[];
+  readonly account: string | null;
+  readonly cooldownSeconds: number;
+  readonly isVoting: boolean;
+  readonly onVote: (candidateIndex: number) => void;
 }
 
 export function CandidatesIcons(props: CandidatesIconsProps) {
@@ -29,6 +33,16 @@ export function CandidatesIcons(props: CandidatesIconsProps) {
           <div className="card-body items-center text-center">
             <h3 className="card-title text-base">{candidate.name}</h3>
             <div className="badge badge-neutral">{candidate.votes} votes</div>
+
+            {props.account && props.cooldownSeconds === 0 && (
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => props.onVote(candidate.id)}
+                disabled={props.isVoting}
+              >
+                {props.isVoting ? "⏳ En cours..." : "Voter →"}
+              </button>
+            )}
           </div>
         </div>
       ))}

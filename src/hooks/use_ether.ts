@@ -20,6 +20,10 @@ export function useEther() {
   const [account, setAccount] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<readonly Candidate[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isVoting, setIsVoting] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [lastBlockNumber, setLastBlockNumber] = useState<number | null>(null);
 
   const loadCandidates = async (provider: BrowserProvider) => {
     const contrat = new Contract(CONTRACT_ADDRESS, ABI, provider);
@@ -56,6 +60,21 @@ export function useEther() {
     init();
   }, []);
 
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+    const timer = window.setInterval(() => {
+      setCooldownSeconds((prev) => {
+        if (prev <= 1) {
+          window.clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [cooldownSeconds]);
+
   const connectWallet = async () => {
     try {
       if (!window.ethereum) {
@@ -87,5 +106,65 @@ export function useEther() {
     }
   };
 
-  return { provider, account, candidates, error, connectWallet };
+  const vote = async (candidateIndex: number) => {
+    if (!provider) {
+      setError("Wallet not connected.");
+      return;
+    }
+    if (!account) {
+      setError("Connect MetaMask to vote.");
+      return;
+    }
+
+    try {
+      setIsVoting(true);
+      setError(null);
+
+      const signer = await provider.getSigner();
+      const voteContract = new Contract(CONTRACT_ADDRESS, ABI, signer);
+
+      const secondsLeft = Number(
+        await voteContract.getTimeUntilNextVote(account),
+      );
+      if (secondsLeft > 0) {
+        setCooldownSeconds(secondsLeft);
+        return;
+      }
+
+      const tx = await voteContract.vote(candidateIndex);
+      setTxHash(tx.hash);
+
+      const receipt = await tx.wait();
+      setLastBlockNumber(Number(receipt.blockNumber));
+
+      await loadCandidates(provider);
+      setCooldownSeconds(3 * 60);
+    } catch (err) {
+      const code = (err as { code?: unknown })?.code;
+      const message = (err as { message?: unknown })?.message;
+
+      if (code === 4001 || code === "ACTION_REJECTED") {
+        setError("Transaction cancelled.");
+      } else {
+        setError(
+          `Error: ${typeof message === "string" ? message : String(err)}`,
+        );
+      }
+    } finally {
+      setIsVoting(false);
+    }
+  };
+
+  return {
+    provider,
+    account,
+    candidates,
+    error,
+    connectWallet,
+    isVoting,
+    cooldownSeconds,
+    txHash,
+    lastBlockNumber,
+    vote,
+  };
 }

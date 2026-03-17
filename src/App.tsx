@@ -3,7 +3,17 @@ import { CandidatesIcons } from "./components/CandidatesIcons";
 import { EXPECTED_NETWORK_NAME } from "./utils/constants";
 
 function App() {
-  const { candidates, error, account, connectWallet } = useEther();
+  const {
+    candidates,
+    error,
+    account,
+    connectWallet,
+    vote,
+    isVoting,
+    cooldownSeconds,
+    txHash,
+    lastBlockNumber,
+  } = useEther();
 
   return (
     <div className="min-h-dvh bg-base-200">
@@ -44,7 +54,41 @@ function App() {
               </div>
             )}
 
-            <CandidatesIcons candidates={candidates} />
+            {account && cooldownSeconds > 0 && (
+              <div className="alert alert-warning">
+                <div className="flex w-full flex-col gap-1">
+                  <p className="font-medium">⏳ Prochain vote disponible dans :</p>
+                  <p className="font-mono text-3xl font-bold tabular-nums">
+                    {String(Math.floor(cooldownSeconds / 60)).padStart(2, "0")}:
+                    {String(cooldownSeconds % 60).padStart(2, "0")}
+                  </p>
+                  <p className="text-xs opacity-70">
+                    La blockchain enregistre l'heure de votre dernier vote via
+                    block.timestamp
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {txHash && (
+              <div className="alert alert-info">
+                <span className="break-all">Transaction envoyée : {txHash}</span>
+              </div>
+            )}
+
+            {lastBlockNumber && (
+              <div className="alert alert-success">
+                <span>✅ Incluse dans le bloc #{lastBlockNumber}</span>
+              </div>
+            )}
+
+            <CandidatesIcons
+              candidates={candidates}
+              account={account}
+              cooldownSeconds={cooldownSeconds}
+              isVoting={isVoting}
+              onVote={vote}
+            />
           </div>
         </div>
       </main>
