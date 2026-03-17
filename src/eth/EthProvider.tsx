@@ -68,7 +68,10 @@ export function EthProvider(props: { readonly children: ReactNode }) {
 
   useEffect(() => {
     const init = async () => {
-      if (!window.ethereum) return;
+      if (!window.ethereum) {
+        setError("MetaMask not installed.");
+        return;
+      }
 
       try {
         const p = new BrowserProvider(window.ethereum);
