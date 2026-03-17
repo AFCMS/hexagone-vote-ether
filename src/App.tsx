@@ -1,5 +1,6 @@
 import "./App.css";
 import { useEther } from "./hooks/use_ether";
+import { CandidatesIcons } from "./components/CandidatesIcons";
 
 function App() {
   const { candidates, error } = useEther();
@@ -8,7 +9,12 @@ function App() {
     return <div>Error: {error}</div>;
   }
 
-  return <>{JSON.stringify(candidates)}</>;
+  return (
+    <div className="app">
+      <h1>Vote for Your Candidate</h1>
+      <CandidatesIcons candidates={candidates} />
+    </div>
+  );
 }
 
 export default App;
