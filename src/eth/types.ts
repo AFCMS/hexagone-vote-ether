@@ -7,6 +7,7 @@ export interface Candidate {
 export interface LastVoteEvent {
   readonly voter: string;
   readonly candidateName: string;
+  readonly txHash: string | null;
 }
 
 export interface ExplorerEvent {

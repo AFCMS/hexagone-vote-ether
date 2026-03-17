@@ -10,6 +10,14 @@ interface StatusAlertsProps {
 }
 
 export function StatusAlerts(props: StatusAlertsProps) {
+  const isConfirmed = props.lastBlockNumber != null;
+  const showPendingTx = props.txHash != null && !isConfirmed;
+  const hideLastEvent =
+    isConfirmed &&
+    props.txHash != null &&
+    props.lastEvent?.txHash != null &&
+    props.lastEvent.txHash === props.txHash;
+
   return (
     <>
       {props.error && (
@@ -30,13 +38,13 @@ export function StatusAlerts(props: StatusAlertsProps) {
         </div>
       )}
 
-      {props.txHash && (
+      {showPendingTx && (
         <div className="alert alert-info">
           <span className="break-all">Transaction sent: {props.txHash}</span>
         </div>
       )}
 
-      {props.lastBlockNumber && (
+      {props.lastBlockNumber != null && (
         <div className="alert alert-success">
           <span>
             ✅ Confirmed in block #{props.lastBlockNumber}
@@ -58,7 +66,7 @@ export function StatusAlerts(props: StatusAlertsProps) {
         </div>
       )}
 
-      {props.lastEvent && (
+      {props.lastEvent && !hideLastEvent && (
         <div className="alert alert-success">
           <span>
             ⚡ New vote - <strong>{props.lastEvent.voter}</strong> voted for{" "}

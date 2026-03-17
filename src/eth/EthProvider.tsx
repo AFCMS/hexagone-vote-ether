@@ -202,14 +202,25 @@ export function EthProvider(props: { readonly children: ReactNode }) {
     try {
       listenContract = new Contract(CONTRACT_ADDRESS, ABI, readProvider);
 
-      const handler = (voter: string, candidateIndex: bigint) => {
+      const handler = (
+        voter: string,
+        candidateIndex: bigint,
+        event: unknown,
+      ) => {
         const idx = Number(candidateIndex);
         const candidateName =
           candidatesRef.current[idx]?.name ?? `Candidate #${idx}`;
 
+        const txHash =
+          (event as { log?: { transactionHash?: string } })?.log
+            ?.transactionHash ??
+          (event as { transactionHash?: string })?.transactionHash ??
+          null;
+
         setLastEvent({
           voter: `${voter.slice(0, 6)}...${voter.slice(-4)}`,
           candidateName,
+          txHash,
         });
 
         void loadCandidates();
@@ -303,7 +314,10 @@ export function EthProvider(props: { readonly children: ReactNode }) {
         const tx = await voteContract.vote(candidateIndex);
         setTxHash(tx.hash);
 
-        const receipt = await tx.wait();
+        const receipt = await readProvider.waitForTransaction(tx.hash);
+        if (!receipt) {
+          throw new Error("Transaction not confirmed yet.");
+        }
         setLastBlockNumber(Number(receipt.blockNumber));
 
         await loadCandidates();
@@ -325,7 +339,7 @@ export function EthProvider(props: { readonly children: ReactNode }) {
         setIsVoting(false);
       }
     },
-    [provider, account, loadCandidates, refreshBalance],
+    [provider, account, loadCandidates, refreshBalance, readProvider],
   );
 
   const loadExplorerEvents = useCallback(async () => {
