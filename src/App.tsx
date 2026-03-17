@@ -13,8 +13,14 @@ import {
 } from "./eth/hooks";
 
 function App() {
-  const { provider, error, account, balanceEth, connectWallet } =
-    useEthWallet();
+  const {
+    provider,
+    error,
+    account,
+    balanceEth,
+    showConnectButton,
+    connectWallet,
+  } = useEthWallet();
   const { cooldownSeconds, txHash, lastBlockNumber } = useEthVoting();
   const { lastEvent } = useEthRealtime();
   const { explorerEvents, explorerLoading, loadExplorerEvents } =
@@ -71,6 +77,7 @@ function App() {
       <Navbar
         account={account}
         balanceEth={balanceEth}
+        showConnectButton={showConnectButton}
         onConnect={connectWallet}
       />
 

@@ -25,6 +25,9 @@ export function EthProvider(props: { readonly children: ReactNode }) {
   const [candidates, setCandidates] = useState<readonly Candidate[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  const [hasMetaMask, setHasMetaMask] = useState(false);
+  const [autoConnectAttempted, setAutoConnectAttempted] = useState(false);
+
   const [isVoting, setIsVoting] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -69,9 +72,13 @@ export function EthProvider(props: { readonly children: ReactNode }) {
   useEffect(() => {
     const init = async () => {
       if (!window.ethereum) {
+        setHasMetaMask(false);
+        setAutoConnectAttempted(true);
         setError("MetaMask not installed.");
         return;
       }
+
+      setHasMetaMask(true);
 
       try {
         const p = new BrowserProvider(window.ethereum);
@@ -81,19 +88,36 @@ export function EthProvider(props: { readonly children: ReactNode }) {
           setError(
             `Wrong network. Expected ${EXPECTED_NETWORK_NAME} (${EXPECTED_CHAIN_ID}), got ${network.name} (${network.chainId})`,
           );
+          setAutoConnectAttempted(true);
           return;
         }
 
         setProvider(p);
+        setError(null);
+
         await loadCandidates(p);
+
+        try {
+          const accounts = (await p.send("eth_accounts", [])) as string[];
+          const addr = accounts?.[0];
+          if (addr) {
+            setAccount(addr);
+            void refreshBalance(p, addr);
+          }
+        } catch {
+          // Ignore: auto-connect is best-effort and should not block app load.
+        }
+
+        setAutoConnectAttempted(true);
       } catch (e) {
         console.error(e);
         setError(String(e));
+        setAutoConnectAttempted(true);
       }
     };
 
     void init();
-  }, [loadCandidates]);
+  }, [loadCandidates, refreshBalance]);
 
   useEffect(() => {
     if (!provider || !account) {
@@ -354,6 +378,9 @@ export function EthProvider(props: { readonly children: ReactNode }) {
         provider,
         account,
         balanceEth,
+        hasMetaMask,
+        autoConnectAttempted,
+        showConnectButton: hasMetaMask && autoConnectAttempted && !account,
         candidates,
         error,
         connectWallet,
@@ -371,6 +398,8 @@ export function EthProvider(props: { readonly children: ReactNode }) {
       provider,
       account,
       balanceEth,
+      hasMetaMask,
+      autoConnectAttempted,
       candidates,
       error,
       connectWallet,

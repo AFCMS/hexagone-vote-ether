@@ -9,8 +9,26 @@ export function useEth() {
 }
 
 export function useEthWallet() {
-  const { provider, account, balanceEth, error, connectWallet } = useEth();
-  return { provider, account, balanceEth, error, connectWallet };
+  const {
+    provider,
+    account,
+    balanceEth,
+    hasMetaMask,
+    autoConnectAttempted,
+    showConnectButton,
+    error,
+    connectWallet,
+  } = useEth();
+  return {
+    provider,
+    account,
+    balanceEth,
+    hasMetaMask,
+    autoConnectAttempted,
+    showConnectButton,
+    error,
+    connectWallet,
+  };
 }
 
 export function useEthCandidates() {

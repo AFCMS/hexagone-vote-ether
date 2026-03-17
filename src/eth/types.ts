@@ -23,6 +23,10 @@ export interface EthContextValue {
   readonly account: string | null;
   readonly balanceEth: string | null;
 
+  readonly hasMetaMask: boolean;
+  readonly autoConnectAttempted: boolean;
+  readonly showConnectButton: boolean;
+
   readonly candidates: readonly Candidate[];
 
   readonly error: string | null;
