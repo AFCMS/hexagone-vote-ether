@@ -17,8 +17,9 @@ export interface Candidate {
 
 export function useEther() {
   const [provider, setProvider] = useState<BrowserProvider>();
+  const [account, setAccount] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<readonly Candidate[]>([]);
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<string | null>(null);
 
   const loadCandidates = async (provider: BrowserProvider) => {
     const contrat = new Contract(CONTRACT_ADDRESS, ABI, provider);
@@ -38,7 +39,7 @@ export function useEther() {
         const p = new BrowserProvider(window.ethereum);
         const network = await p.getNetwork();
 
-        if (Number(network.chainId) !== EXPECTED_CHAIN_ID) {
+        if (network.chainId !== BigInt(EXPECTED_CHAIN_ID)) {
           setError(
             `Wrong network. Expected ${EXPECTED_NETWORK_NAME} (${EXPECTED_CHAIN_ID}), got ${network.name} (${network.chainId})`,
           );
@@ -55,5 +56,36 @@ export function useEther() {
     init();
   }, []);
 
-  return { provider, candidates, error };
+  const connectWallet = async () => {
+    try {
+      if (!window.ethereum) {
+        setError("MetaMask not installed.");
+        return;
+      }
+
+      const _provider = new BrowserProvider(window.ethereum);
+      await _provider.send("eth_requestAccounts", []);
+
+      const network = await _provider.getNetwork();
+      if (network.chainId !== BigInt(EXPECTED_CHAIN_ID)) {
+        setError(
+          `Wrong network - connect MetaMask to ${EXPECTED_NETWORK_NAME}.`,
+        );
+        return;
+      }
+
+      const signer = await _provider.getSigner();
+      const address = await signer.getAddress();
+
+      setAccount(address);
+      setProvider(_provider);
+      setError(null);
+
+      await loadCandidates(_provider);
+    } catch {
+      setError("Connection refused.");
+    }
+  };
+
+  return { provider, account, candidates, error, connectWallet };
 }
